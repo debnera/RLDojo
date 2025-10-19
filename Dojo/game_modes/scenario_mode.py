@@ -111,6 +111,13 @@ class ScenarioMode(BaseGameMode):
             
     def _handle_menu_exiting_phase(self, packet):
         """Unfreeze game state after a 3 second countdown"""
+
+        # Allow user to reset while waiting for the countdown
+        if self.game_state.manual_reset_requested:
+            self.game_state.manual_reset_requested = False
+            self.game_state.game_phase = ScenarioPhase.SETUP
+            return
+
         # For each second, render a countdown from 3 to 1
         if time.time() - self.last_menu_phase_time > 3:
             self.game_state.game_phase = ScenarioPhase.ACTIVE
@@ -125,6 +132,14 @@ class ScenarioMode(BaseGameMode):
     
     def _handle_paused_phase(self, packet):
         """Handle paused phase - wait before starting scenario"""
+
+        # Allow user to reset while waiting for the countdown
+        if self.game_state.manual_reset_requested:
+            self.game_state.manual_reset_requested = False
+            self.game_state.game_phase = ScenarioPhase.SETUP
+            return
+
+        # Process countdown
         time_elapsed = self.game_state.cur_time - self.prev_time
         if (time_elapsed < self.game_state.pause_time or 
             self.goal_scored(packet) or 
