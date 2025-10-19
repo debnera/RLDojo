@@ -184,8 +184,12 @@ class Dojo(BaseScript):
         self.game_state.manual_reset_requested = True
 
     def _toggle_timeout(self):
-        """Enable the timeout"""
+        """Toggle the timeout"""
         self.game_state.enable_timeouts = not self.game_state.enable_timeouts
+
+    def _toggle_freeze_scenario(self):
+        """Toggle freeze scenario"""
+        self.game_state.freeze_scenario = not self.game_state.freeze_scenario
 
     
     def _setup_keyboard_handlers(self):
@@ -201,6 +205,7 @@ class Dojo(BaseScript):
         keyboard.add_hotkey('enter', self._enter_handler)
         keyboard.add_hotkey('1', self._handle_custom_trial)
         keyboard.add_hotkey('5', self._toggle_timeout)
+        keyboard.add_hotkey('6', self._toggle_freeze_scenario)
 
         # For all other letters, submit the letter as a text input
         for letter in string.ascii_lowercase:
