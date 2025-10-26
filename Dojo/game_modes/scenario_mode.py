@@ -165,8 +165,9 @@ class ScenarioMode(BaseGameMode):
         time_elapsed = self.game_state.cur_time - self.prev_time
         timed_out = time_elapsed > self.game_state.timeout and self.game_state.enable_timeouts
         if timed_out or self.game_state.manual_reset_requested:
-            if (packet.game_ball.physics.location.z < BALL_GROUND_THRESHOLD or 
-                not self.game_state.rule_zero_mode):
+            if (packet.game_ball.physics.location.z < BALL_GROUND_THRESHOLD
+                or not self.game_state.rule_zero_mode
+                or self.game_state.manual_reset_requested):
                 self.game_state.manual_reset_requested = False
                 self._award_defensive_goal()
                 self.game_state.game_phase = ScenarioPhase.SETUP
