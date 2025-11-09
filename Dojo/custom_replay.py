@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional, Tuple
 
 from rlbot.utils.game_state_util import CarState, GameState
 
+from game_modes import PlaylistEditMode
 from playlist import Playlist, ScenarioConfig, PlaylistSettings, PlayerRole
 from scenario import OffensiveMode, DefensiveMode
 from menu import MenuRenderer, UIElement
@@ -31,6 +32,7 @@ class CustomReplayManager:
         self.current_timeout = 7.0
         self.current_rule_zero = False
         self.rlbot_get_game_tick_packet = rlbot_get_game_tick_packet_function
+        self.replay_game_mode: Optional[PlaylistEditMode] = None
 
     def create_playlist_creation_menu(self):
         """Create the main playlist creation menu"""
@@ -107,6 +109,24 @@ class CustomReplayManager:
         self.current_scenarios = playlist.scenarios
         self.custom_scenarios = playlist.custom_scenarios
         self.main_menu_renderer.handle_back_key()
+        self._refresh_ui()
+
+    def _refresh_ui(self):
+        if self.replay_game_mode:
+            # TODO: Why not just store current playlist as a Playlist object instead of recreating it?
+            print("[CustomReplayManager] Refreshing UI")
+            playlist = Playlist(
+                name=self.current_playlist_name,
+                description=f"Custom playlist with {len(self.current_scenarios)} scenarios",
+                scenarios=self.current_scenarios.copy(),
+                custom_scenarios=self.current_custom_scenarios.copy(),
+                settings=PlaylistSettings(timeout=self.current_timeout, shuffle=True,
+                                          boost_range=self.current_boost_range,
+                                          rule_zero=self.current_rule_zero)
+            )
+            self.replay_game_mode.set_current_playlist(playlist)
+        else:
+            print("[CustomReplayManager] Error: No replay game mode set")
 
     def _create_scenario_selection_menu(self):
         """Create menu for selecting scenarios to add"""
@@ -250,6 +270,7 @@ class CustomReplayManager:
         rlbot_game_state = GameState(ball=packet.game_ball, cars=car_states)
         scenario = CustomScenario.from_rlbot_game_state(name="replay_test", game_state=rlbot_game_state)
         self.current_custom_scenarios.append(scenario)
+        self._refresh_ui()
 
     def _set_min_boost(self, boost):
         """Set minimum boost value"""

@@ -9,6 +9,7 @@ from game_modes import BaseGameMode
 
 if TYPE_CHECKING:
     from game_state import DojoGameState
+    from playlist import Playlist
     from rlbot.utils.structures.game_interface import GameInterface
     from rlbot.utils.structures.game_data_struct import GameTickPacket
 
@@ -25,11 +26,13 @@ class EditPhase(Enum):
 class PlaylistEditMode(BaseGameMode):
     """"""
     
-    def __init__(self, game_state: 'DojoGameState', game_interface: 'GameInterface'):
+    def __init__(self, game_state: 'DojoGameState', game_interface: 'GameInterface', game_ui: 'ReplayUIRenderer'):
         super().__init__(game_state, game_interface)
         self.game_state = game_state
         self.game_interface = game_interface
+        self.game_ui = game_ui
         self.current_packet: Optional['GameTickPacket'] = None
+        self.current_playlist: Optional['Playlist'] = None
 
     def update(self, packet: 'GameTickPacket') -> None:
         """Update the game mode with the current packet"""
@@ -54,6 +57,13 @@ class PlaylistEditMode(BaseGameMode):
         rlbot_game_state = GameState(ball=ball_state, cars=car_states)
         return rlbot_game_state
 
+    def set_current_playlist(self, playlist: 'Playlist'):
+        print("[PlaylistEditMode] Setting new playlist")
+        if self.game_ui:
+            self.game_ui.playlist = playlist
+        else:
+            print("[PlaylistEditMode] Error: No UI renderer set")
+
 
 from typing import Optional
 from game_state import DojoGameState, GymMode, ScenarioPhase, CUSTOM_MODES
@@ -71,66 +81,47 @@ class ReplayUIRenderer:
     def __init__(self, renderer, game_state: DojoGameState):
         self.renderer = renderer
         self.game_state = game_state
+        self.playlist = None
 
     def render_main_ui(self):
-        """Render the main UI elements (score, time, etc.)"""
-        if self.game_state.game_phase in [ScenarioPhase.MENU, *CUSTOM_MODES]:
-            return
-        minutes, seconds = self.game_state.get_time_since_start()
-        seconds_str = f"{seconds:02d}"
-
-        # Prepare text content
-        text = "Welcome to the Replay mode. Press 'm' to enter menu."
-        previous_record = "No record"
-
-        """ Draft menu
-        
-        Mode: Replay-to-playlist
-        Current playlist: *name*
-        
-        Playlist details:
-            ...
-        
-        Instructions: Go to a replay. Press hotkey 'SAVE_STATE' to add a custom scenario to the playlist.
-        
-        """
-
-        if self.game_state.gym_mode == GymMode.SCENARIO:
-            scores = f"Human: {self.game_state.human_score} Bot: {self.game_state.bot_score}"
-            total_score = f"Total: {self.game_state.human_score + self.game_state.bot_score}"
-            time_since_start = f"Time: {minutes}:{seconds_str}"
-            timeout_enabled = f"Timeouts enabled: {self.game_state.enable_timeouts}"
-            freeze_scenario_enabled = f"Scenario frozen: {self.game_state.freeze_scenario}"
-            offensive_mode_name = f"Offensive Mode: {self.game_state.offensive_mode.name}"
-            defensive_mode_name = f"Defensive Mode: {self.game_state.defensive_mode.name}"
-            player_role_name = "offense" if self.game_state.player_offense else "defense"
-            player_role_string = f"Player Role: {player_role_name}"
-            previous_record = ""
-            game_phase_name = f"Game Phase: {self.game_state.game_phase.name}"
-        elif self.game_state.gym_mode == GymMode.RACE:
-            scores = f"Completed: {self.game_state.human_score}"
-            total_score = f"Out of: {self.game_state.num_trials}"
-            time_since_start = f"Time: {minutes}:{seconds_str}"
-            previous_record_data = self.game_state.get_previous_record()
-            if previous_record_data:
-                prev_minutes = int(previous_record_data // 60)
-                prev_seconds = int(previous_record_data % 60)
-                previous_record = f"Previous Record: {prev_minutes}:{prev_seconds:02d}"
+        """Render the main UI elements"""
 
         # Render UI elements
         self.renderer.begin_rendering()
 
-        # Main instruction text
+        # Header text
+        text = "Welcome to the Replay mode. Press 'm' to enter menu."
         self.renderer.draw_string_2d(20, 50, 1, 1, text, self.renderer.yellow())
 
+
+        # Other text elements
+        text_elements = ["In this mode you can add scenarios to a playlist."]
+
+        if self.playlist:
+            playlist = self.playlist
+            text_elements.append("Current playlist:")
+            text_elements.append(f"\t Name: {playlist.name}")
+            text_elements.append(f"\t Scenarios: {len(playlist.scenarios)}")
+            text_elements.append(f"\t Scenarios: {len(playlist.custom_scenarios)}")
+            boost_range = playlist.settings.boost_range
+            text_elements.append(f"\t Boost Range: {boost_range[0]}-{boost_range[1]}")
+            text_elements.append(f"\t Timeout: {playlist.settings.timeout}s")
+        else:
+            text_elements.append("No playlist selected. Select a playlist from the menu.")
+
+
+
+        text_elements.append("Instructions:")
+        text_elements.append("\t - Go to any replay.")
+        text_elements.append("\t - Press hotkey 'SAVE_STATE' to add a custom scenario to the playlist.")
+        text_elements.append("\t - Do not forget to save the playlist afterwards.")
+        # text_elements.extend([scores, total_score, time_since_start, previous_record])
+        # if self.game_state.gym_mode == GymMode.SCENARIO:
+        #     text_elements.extend([offensive_mode_name, defensive_mode_name, player_role_string, game_phase_name])
+        #     text_elements.extend([timeout_enabled, freeze_scenario_enabled])
+
+        # Draw elements
         current_y = SCORE_BOX_START_Y + 10
-
-        text_elements = ["wohoo", "replay_mode", "yay"]
-        text_elements.extend([scores, total_score, time_since_start, previous_record])
-        if self.game_state.gym_mode == GymMode.SCENARIO:
-            text_elements.extend([offensive_mode_name, defensive_mode_name, player_role_string, game_phase_name])
-            text_elements.extend([timeout_enabled, freeze_scenario_enabled])
-
         for i, text in enumerate(text_elements):
             self.renderer.draw_string_2d(SCORE_BOX_START_X + 10, current_y, 1, 1, text, self.renderer.white())
             current_y += 30
