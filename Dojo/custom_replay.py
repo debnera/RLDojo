@@ -223,6 +223,7 @@ class CustomReplayManager:
     def _set_playlist_name(self, name):
         self.current_playlist_name = name
         print(f"Playlist name set to: {name}")
+        self._refresh_ui()
 
     def _set_temp_offensive_mode(self, mode):
         self.temp_offensive_mode = mode
@@ -258,6 +259,7 @@ class CustomReplayManager:
                 self.main_menu_renderer.handle_back_key()
         else:
             print("Please select offensive mode, defensive mode, and player role first")
+        self._refresh_ui()
 
     def add_current_state_to_playlist(self):
         print("Adding current game state")
@@ -276,21 +278,25 @@ class CustomReplayManager:
         """Set minimum boost value"""
         self.current_boost_range = (boost, max(boost + 10, self.current_boost_range[1]))
         print(f"Set boost range: {self.current_boost_range}")
+        self._refresh_ui()
 
     def _set_max_boost(self, boost):
         """Set maximum boost value"""
         self.current_boost_range = (min(boost - 10, self.current_boost_range[0]), boost)
         print(f"Set boost range: {self.current_boost_range}")
+        self._refresh_ui()
 
     def _set_timeout(self, timeout):
         """Set scenario timeout"""
         self.current_timeout = timeout
         print(f"Set timeout: {timeout}s")
+        self._refresh_ui()
 
     def _toggle_rule_zero(self):
         """Toggle rule zero setting"""
         self.current_rule_zero = not self.current_rule_zero
         print(f"Rule zero: {'ON' if self.current_rule_zero else 'OFF'}")
+        self._refresh_ui()
 
     def _save_current_playlist(self):
         """Save the currently configured playlist to file, and register it in the playlist registry"""
@@ -316,6 +322,7 @@ class CustomReplayManager:
         """Cancel playlist creation and reset"""
         self._reset_current_playlist()
         print("Playlist creation cancelled")
+        self._refresh_ui()
 
     def _reset_current_playlist(self):
         """Reset current playlist creation data"""
@@ -333,6 +340,7 @@ class CustomReplayManager:
         """Add a custom scenario"""
         self.current_custom_scenarios.append(CustomScenario.load(scenario_name))
         print(f"Added custom scenario: {scenario_name}")
+        self._refresh_ui()
 
     def get_custom_playlists(self) -> Dict[str, Playlist]:
         """Get all custom playlists"""
