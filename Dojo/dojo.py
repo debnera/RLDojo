@@ -114,7 +114,7 @@ class Dojo(BaseScript):
         """Initialize all components that require the game interface"""
         
         # Initialize UI renderer
-        self.ui_renderer = UIRenderer(self.game_interface.renderer, self.game_state)
+        self.normal_ui_renderer = UIRenderer(self.game_interface.renderer, self.game_state)
         
         # Initialize custom playlist manager and playlist registry
         self.custom_playlist_manager = CustomPlaylistManager(renderer=self.game_interface.renderer, main_menu_renderer=self.menu_renderer)
@@ -161,7 +161,8 @@ class Dojo(BaseScript):
             return
 
         # Clean up before changing to a new game mode
-        self.current_mode.cleanup()
+        if self.current_mode:
+            self.current_mode.cleanup()
 
         # Change game mode
         if new_mode == GymMode.SCENARIO:
