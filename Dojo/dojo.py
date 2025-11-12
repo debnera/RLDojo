@@ -126,7 +126,7 @@ class Dojo(BaseScript):
         self.race_mode = RaceMode(self.game_state, self.game_interface)
         self.playlist_edit_mode = PlaylistEditMode(self.game_state, self.game_interface, game_ui=None)
         self.playlist_edit_ui_renderer = ReplayUIRenderer(self.game_interface.renderer, self.game_state)
-        self._change_game_mode(GymMode.SCENARIO)
+        self.change_game_mode(GymMode.SCENARIO)
         
         # Set up custom playlist manager with scenario mode
         self.scenario_mode.set_playlist_registry(self.playlist_registry)
@@ -156,7 +156,14 @@ class Dojo(BaseScript):
         # Set initial pause time
         self.game_state.pause_time = constants.DEFAULT_PAUSE_TIME
 
-    def _change_game_mode(self, new_mode: GymMode):
+    def change_game_mode(self, new_mode: GymMode):
+        if self.current_mode == new_mode:
+            return
+
+        # Clean up before changing to a new game mode
+        self.current_mode.cleanup()
+
+        # Change game mode
         if new_mode == GymMode.SCENARIO:
             self.current_mode = self.scenario_mode
             self.ui_renderer = self.normal_ui_renderer
@@ -174,7 +181,7 @@ class Dojo(BaseScript):
 
 
     def _switch_to_replay_mode(self):
-        self._change_game_mode(GymMode.EDIT_PLAYLIST)
+        self.change_game_mode(GymMode.EDIT_PLAYLIST)
 
     def _setup_menus(self):
         """Set up all menu systems"""
@@ -365,7 +372,7 @@ class Dojo(BaseScript):
     def _handle_custom_trial(self):
         """Handle custom trial key"""
         self.game_state.game_phase = ScenarioPhase.CUSTOM_TRIAL
-        self.current_mode = self.scenario_mode
+        self.change_game_mode(GymMode.SCENARIO)
             
     def _custom_cycle_selection(self):
         """Cycle through the custom selection list"""
@@ -505,9 +512,9 @@ class Dojo(BaseScript):
             # todo put some state saving here so it doesn't setup the wrong scenario?
             self.scenario_mode.set_custom_scenario(custom_scenario)
             self.game_state.game_phase = ScenarioPhase.SETUP
-            self.current_mode = self.scenario_mode
-            self.current_mode.clear_playlist()
-            self.current_mode._set_next_game_state()
+            self.change_game_mode(GymMode.SCENARIO)
+            self.scenario_mode.clear_playlist()
+            self.scenario_mode._set_next_game_state()
     
     def _select_offensive_mode(self, mode):
         """Select offensive mode"""
@@ -515,10 +522,9 @@ class Dojo(BaseScript):
         self.game_state.offensive_mode = mode
         if self.game_state.game_phase != ScenarioPhase.MENU:
             self.game_state.game_phase = ScenarioPhase.SETUP
-        self.current_mode = self.scenario_mode
-        self.game_state.gym_mode = GymMode.SCENARIO
-        self.current_mode.clear_playlist()
-        self.current_mode._set_next_game_state()
+        self.change_game_mode(GymMode.SCENARIO)
+        self.scenario_mode.clear_playlist()
+        self.scenario_mode._set_next_game_state()
 
     
     def _select_defensive_mode(self, mode):
@@ -527,10 +533,9 @@ class Dojo(BaseScript):
         self.game_state.defensive_mode = mode
         if self.game_state.game_phase != ScenarioPhase.MENU:
             self.game_state.game_phase = ScenarioPhase.SETUP
-        self.current_mode = self.scenario_mode
-        self.game_state.gym_mode = GymMode.SCENARIO
-        self.current_mode.clear_playlist()
-        self.current_mode._set_next_game_state()
+        self.change_game_mode(GymMode.SCENARIO)
+        self.scenario_mode.clear_playlist()
+        self.scenario_mode._set_next_game_state()
             
     def _set_player_role(self, role):
         """Set the player role"""
@@ -538,23 +543,17 @@ class Dojo(BaseScript):
             self.game_state.player_offense = True
         else:
             self.game_state.player_offense = False
-        self.current_mode = self.scenario_mode
-        self.game_state.gym_mode = GymMode.SCENARIO
-        self.current_mode.clear_playlist()
-        self.current_mode._set_next_game_state()
+        self.change_game_mode(GymMode.SCENARIO)
+        self.scenario_mode.clear_playlist()
+        self.scenario_mode._set_next_game_state()
     
     def _set_race_mode(self, trials):
         """Set race mode with specified number of trials"""
         print(f"Setting race mode with {trials} trials")
-        self.game_state.gym_mode = GymMode.RACE
+        self.change_game_mode(GymMode.RACE)
         self.game_state.game_phase = RacePhase.INIT
         self.game_state.num_trials = trials
         self.game_state.race_mode_records = get_race_records()
-        
-        # Switch to race mode
-        if self.current_mode:
-            self.current_mode.cleanup()
-        self.current_mode = self.race_mode
     
     def _toggle_menu(self):
         """Toggle menu visibility"""
@@ -777,8 +776,8 @@ class Dojo(BaseScript):
         custom_scenario = CustomScenario.load(scenario_name)
         self.scenario_mode.set_custom_scenario(custom_scenario)
         self.game_state.game_phase = ScenarioPhase.SETUP
-        self.current_mode = self.scenario_mode
-        self.current_mode.clear_playlist()
+        self.change_game_mode(GymMode.SCENARIO)
+        self.scenario_mode.clear_playlist()
 
     def create_playlist_menu(self):
         """Create playlist selection submenu"""
@@ -805,14 +804,10 @@ class Dojo(BaseScript):
         """Set the active playlist and return to game"""
         print(f"Setting playlist: {playlist_name}")
         self.scenario_mode.set_playlist(playlist_name)
-        self.game_state.gym_mode = GymMode.SCENARIO
         self.game_state.game_phase = ScenarioPhase.SETUP
 
         # Switch to scenario mode if not already
-        if self.current_mode != self.scenario_mode:
-            if self.current_mode:
-                self.current_mode.cleanup()
-            self.current_mode = self.scenario_mode
+        self.change_game_mode(GymMode.SCENARIO)
 
     def cleanup(self):
         """Clean up keyboard handlers"""
