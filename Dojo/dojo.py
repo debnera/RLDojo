@@ -804,13 +804,22 @@ class Dojo(BaseScript):
 
         # Add each playlist as a menu option
         for playlist_name in self.playlist_registry.list_playlists():
-            # print(f"Playlist name: {playlist_name}")
-            # print(f"Retrieved playlist: {self.playlist_registry.get_playlist(playlist_name)}")
             playlist = self.playlist_registry.get_playlist(playlist_name)
+            display_name = playlist.name
+            if playlist.is_custom_playlist():
+                # Clarify playlist type for custom playlists
+                if playlist.get_number_of_players() == 2:
+                    display_name += " (1v1)"
+                elif playlist.get_number_of_players() <= 4:
+                    display_name += " (2v2)"
+                elif playlist.get_number_of_players() <= 6:
+                    display_name += " (3v3)"
+                else:
+                    display_name += " (4v4)"
             playlist_menu.add_element(UIElement(
-                f"{playlist.name}",
+                f"{display_name}",
                 function=self.set_playlist,
-                function_args=playlist_name
+                function_args=playlist.name
             ))
 
         return playlist_menu
