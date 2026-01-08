@@ -1,9 +1,8 @@
-import json
 import os
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Dict, Optional
 
 import numpy as np
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from rlbot.utils.game_state_util import GameState, BallState, CarState, Physics, Vector3, Rotator
 
 import utils
@@ -166,6 +165,7 @@ class TypedGameState(BaseModel):
 
         return GameState(cars=cars, ball=ball)
 
+
 class CustomScenario(BaseModel):
     """A custom scenario that can be saved to and loaded from disk.
     
@@ -194,37 +194,42 @@ class CustomScenario(BaseModel):
     def create_randomized_copy(self) -> 'CustomScenario':
         """Add random variance to the game state"""
         # TODO: Finetune these or make them configurable
-        yaw_variance = 0.5 * np.pi
-        velocity_variance = 0.5
-        boost_variance = 0.5
+        yaw_variance = 0.2 * np.pi
+        velocity_variance = 0.2
+        boost_variance = 0.3
 
         randomized_scenario = CustomScenario.model_copy(self, deep=True)
         for car in randomized_scenario.game_state.cars.values():
-            # Randomize yaw
-            yaw = car.physics.rotation.yaw
-            yaw = yaw + utils.random_between(-yaw_variance, yaw_variance)
-            car.physics.rotation.yaw = yaw
+            # 1. Get random yaw variation
+            yaw_diff = utils.random_between(-yaw_variance, yaw_variance)
 
-            # Randomize velocity (TODO: If we rotate yaw, we might want to rotate velocity as well?)
-            velocity = car.physics.velocity
-            velocity.z *= utils.random_between(1-velocity_variance, 1+velocity_variance)
-            velocity.x *= utils.random_between(1-velocity_variance, 1+velocity_variance)
-            velocity.y *= utils.random_between(1-velocity_variance, 1+velocity_variance)
-            car.physics.velocity = velocity
+            # 2. Update car rotation
+            original_rotation = car.physics.rotation
+            car.physics.rotation = utils.rotate_orientation_around_up_axis(original_rotation, yaw_diff)
 
-            # Randomize boost amount
+            # 3. Rotate velocity around the local UP axis so it stays flush with the surface
+            car.physics.velocity = utils.rotate_vector_around_up_axis(original_rotation, car.physics.velocity, yaw_diff)
+
+            # 4. Randomize speed
+            v_magnitude = np.sqrt(car.physics.velocity.x**2 + car.physics.velocity.y**2 + car.physics.velocity.z**2)
+            max_velocity = 2300  # Max possible speed in unreal units
+            max_v_scale = max_velocity / v_magnitude
+            v_scale = utils.random_between(1 - velocity_variance, 1 + velocity_variance)
+            v_scale = min(v_scale, max_v_scale)  # Not sure if we need this at all, but it might avoid some visual bugs
+            car.physics.velocity.x *= v_scale
+            car.physics.velocity.y *= v_scale
+            car.physics.velocity.z *= v_scale
+
+            # 5. Randomize boost amount
             car.boost_amount =  car.boost_amount * utils.random_between(1-boost_variance, 1+boost_variance)
 
         if randomized_scenario.game_state.ball is not None:
-            # Randomize ball velocity
+            # Randomize ball velocity (and direction since we randomize each component separately)
             ball = randomized_scenario.game_state.ball
             ball.physics.velocity.z *= utils.random_between(1-velocity_variance, 1+velocity_variance)
             ball.physics.velocity.x *= utils.random_between(1-velocity_variance, 1+velocity_variance)
             ball.physics.velocity.y *= utils.random_between(1-velocity_variance, 1+velocity_variance)
             randomized_scenario.game_state.ball = ball
-
-            # Randomize ball yaw
-            pass # Implement if needed
 
         return randomized_scenario
 
