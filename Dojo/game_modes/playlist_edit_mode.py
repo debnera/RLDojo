@@ -94,14 +94,15 @@ class PlaylistEditMode(BaseGameMode):
         car_states = {}
         # Store vehicles in order. The first element is always the player.
         # Mirror physics if necessary, so players are facing the correct goal.
-        print(f"Mirroring physics: {should_mirror_physics}")
+        # print(f"Mirroring physics: {should_mirror_physics}")
         for player_mapping in indices:
             custom_scenario_index = player_mapping.custom_scenario_index
             rlbot_packet_index = player_mapping.rlbot_packet_index
             player = packet.game_cars[rlbot_packet_index]
             car_physics = self.mirror_physics(player.physics) if should_mirror_physics else player.physics
             car_state = CarState(physics=car_physics, boost_amount=player.boost,
-                                     jumped=player.jumped, double_jumped=player.double_jumped)
+                                 # jumped=player.jumped, double_jumped=player.double_jumped  # RLBotv4 does not support these
+                                 )
             car_states[custom_scenario_index] = car_state
         ball_physics = self.mirror_physics(packet.game_ball.physics) if should_mirror_physics else packet.game_ball.physics
         ball_state = BallState(physics=ball_physics)
