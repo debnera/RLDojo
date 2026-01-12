@@ -1,7 +1,6 @@
 from typing import Tuple
 
 import numpy as np
-from game_state_util import Rotator, Vector3
 from rlbot.utils.game_state_util import GameState, BallState, CarState, Physics, Vector3, Rotator, GameInfoState
 
 SIDE_WALL=4096
